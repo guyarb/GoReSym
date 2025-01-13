@@ -19,19 +19,18 @@ import (
 	"github.com/mandiant/GoReSym/runtime/debug"
 )
 
-func isStdPackage(pkg string) bool {
+var (
+	supportedFuncs = map[string]struct{}{
+		"crypto/tls.(*Conn).Write": {},
+		"crypto/tls.(*Conn).Read":  {},
+		"crypto/tls.(*Conn).Close": {},
+	}
+)
+
+func isRelevantFunction(f string) bool {
 	// Empty name is common for reflect/type functions and some runtime symbols
-	if len(strings.TrimSpace(pkg)) <= 0 {
-		return true
-	}
-
-	for _, v := range standardPackages {
-		if v == pkg {
-			return true
-		}
-	}
-
-	return false
+	_, ok := supportedFuncs[f]
+	return ok
 }
 
 // pclntab header info
@@ -47,6 +46,7 @@ type PcLnTabMetadata struct {
 type FuncMetadata struct {
 	Start       uint64
 	End         uint64
+	Size        uint64
 	PackageName string
 	FullName    string
 }
@@ -289,22 +289,16 @@ restartParseWithRealTextBase:
 
 	if !noPrintFunctions {
 		for _, elem := range finalTab.ParsedPclntab.Funcs {
-			if isStdPackage(elem.PackageName()) {
+			if isRelevantFunction(elem.Name) {
 				if printStdPkgs {
 					extractMetadata.StdFunctions = append(extractMetadata.StdFunctions, FuncMetadata{
 						Start:       elem.Entry,
 						End:         elem.End,
+						Size:        elem.End - elem.Entry,
 						PackageName: elem.PackageName(),
 						FullName:    elem.Name,
 					})
 				}
-			} else {
-				extractMetadata.UserFunctions = append(extractMetadata.UserFunctions, FuncMetadata{
-					Start:       elem.Entry,
-					End:         elem.End,
-					PackageName: elem.PackageName(),
-					FullName:    elem.Name,
-				})
 			}
 		}
 	}
@@ -382,6 +376,7 @@ func printForHuman(metadata ExtractMetadata) {
 			fnPrefix := fmt.Sprintf("UserFunc%d.", i)
 			fmt.Printf("%-20s 0x%x\n", fnPrefix+"StartVA:", fn.Start)
 			fmt.Printf("%-20s 0x%x\n", fnPrefix+"EndVA:", fn.End)
+			fmt.Printf("%-20s 0x%x\n", fnPrefix+"Size:", fn.Size)
 			fmt.Printf("%-20s %s\n", fnPrefix+"Package:", fn.PackageName)
 			fmt.Printf("%-20s %s\n", fnPrefix+"Name:", strings.TrimLeft(strings.TrimLeft(fn.FullName, fn.PackageName), "."))
 		}
@@ -395,6 +390,7 @@ func printForHuman(metadata ExtractMetadata) {
 			fnPrefix := fmt.Sprintf("StdFunc%d.", i)
 			fmt.Printf("%-20s 0x%x\n", fnPrefix+"StartVA:", fn.Start)
 			fmt.Printf("%-20s 0x%x\n", fnPrefix+"EndVA:", fn.End)
+			fmt.Printf("%-20s 0x%x\n", fnPrefix+"Size:", fn.Size)
 			fmt.Printf("%-20s %s\n", fnPrefix+"Name:", fn.FullName)
 		}
 	} else {
