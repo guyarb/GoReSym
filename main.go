@@ -386,12 +386,11 @@ func printForHuman(metadata ExtractMetadata) {
 
 	fmt.Println("\n-Standard Functions-")
 	if len(metadata.StdFunctions) > 0 {
-		for i, fn := range metadata.StdFunctions {
-			fnPrefix := fmt.Sprintf("StdFunc%d.", i)
-			fmt.Printf("%-20s 0x%x\n", fnPrefix+"StartVA:", fn.Start)
-			fmt.Printf("%-20s 0x%x\n", fnPrefix+"EndVA:", fn.End)
-			fmt.Printf("%-20s 0x%x\n", fnPrefix+"Size:", fn.Size)
-			fmt.Printf("%-20s %s\n", fnPrefix+"Name:", fn.FullName)
+		for _, fn := range metadata.StdFunctions {
+			fmt.Println("Func: ", fn.FullName)
+			fmt.Printf("\tStart Address: 0x%x\n", fn.Start)
+			fmt.Printf("\tEnd Address: 0x%x\n", fn.End)
+			fmt.Printf("\tSize: 0x%x\n", fn.Size)
 		}
 	} else {
 		fmt.Println("<NO STANDARD FUNCTIONS EXTRACTED>")
